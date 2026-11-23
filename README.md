@@ -16,7 +16,7 @@ The command refuses to overwrite an existing link. Keep the SQLite database and 
 
 ## Deployment
 
-The Valhallishe infrastructure repository provides the Nix/systemd and rootless Podman configuration. It reads the panel token from `/home/krozzzis/.config/valhallishe-vpn/remnawave-token` on nixarchserver; never commit this file. Set `DATABASE_PATH` to the persistent SQLite path. `npm ci --legacy-peer-deps` installs the locked dependencies; `npm run db:migrate` migrates the auth database. The container starts with the migration.
+The Valhallishe infrastructure repository provides the Nix/systemd and rootless Podman configuration. It reads the panel token from `/home/krozzzis/.config/valhallishe-vpn/remnawave-token` on nixarchserver; never commit this file. Set `DATABASE_PATH` to the persistent SQLite path. `npm ci --legacy-peer-deps` installs the locked dependencies; `npm run db:migrate` migrates the auth database. The standalone server applies its auth database migration at startup. The runtime image contains only Node.js, the traced application and its runtime dependencies.
 
 The Authentik application is `vpn-portal` and its access group is `vpn-portal-access`; the `default-citizen` role also grants access. The public OIDC callback is `/api/auth/callback/oauth`.
 
