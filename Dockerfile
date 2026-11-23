@@ -3,6 +3,7 @@ FROM ${NODE_IMAGE}
 USER root
 ENTRYPOINT []
 WORKDIR /app
+ENV NODE_ENV=development
 RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps --ignore-scripts && npm rebuild better-sqlite3
