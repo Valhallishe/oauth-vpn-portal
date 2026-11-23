@@ -1,4 +1,7 @@
-FROM node:22-alpine
+ARG NODE_IMAGE=node:22-alpine
+FROM ${NODE_IMAGE}
+USER root
+ENTRYPOINT []
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
