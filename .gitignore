@@ -39,4 +39,6 @@ next-env.d.ts
 .env
 marzban-config.db
 panel-config.db
-auth-db.sqlite
+auth-db.sqlite*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal

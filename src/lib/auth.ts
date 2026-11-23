@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { nextCookies } from 'better-auth/next-js'
 import { genericOAuth } from 'better-auth/plugins/generic-oauth'
-import Database from 'better-sqlite3'
+import { database } from './database'
 import { Pool } from 'pg'
 import { env } from './env'
 
@@ -9,13 +9,8 @@ export const auth = betterAuth({
   baseURL: env.NEXT_PUBLIC_APP_URL,
   database: env.DATABASE_URL
     ? new Pool({ connectionString: env.DATABASE_URL })
-    : new Database('auth-db.sqlite'),
+    : database,
   updateAccountOnSignIn: true,
-  user: {
-    deleteUser: {
-      enabled: true,
-    },
-  },
   trustedOrigins: [env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'],
   plugins: [
     genericOAuth({
@@ -29,9 +24,9 @@ export const auth = betterAuth({
           scopes: ['openid', 'email', 'profile'],
           mapProfileToUser: (profile) => {
             return {
-              email: profile.email,
+              email: profile.email ?? undefined,
               name: profile.name,
-              image: profile.picture,
+              image: typeof profile.picture === 'string' ? profile.picture : undefined,
             }
           },
         },

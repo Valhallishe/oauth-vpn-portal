@@ -1,3 +1,27 @@
+# Valhallishe Account / VPN portal
+
+Fork of [OAuth VPN Portal](https://github.com/kirill-dev-pro/oauth-vpn-portal), adapted for Authentik and Remnawave 3.x. The home page displays the signed-in account, and `/vpn` displays its subscription. Sign-in uses OIDC with PKCE.
+
+New users who open `/vpn` receive an unlimited subscription in `Default-Squad` (expiry 2099). The portal does not modify existing limits. A random reserved username makes creation retryable; existing Remnawave accounts are never matched automatically by email or username.
+
+## Existing subscriptions
+
+An administrator must link an existing subscription before that user first opens `/vpn`. The user should first sign in at `/` so the portal has a local account. In the running container execute:
+
+```sh
+node scripts/link-user.cjs USER_EMAIL REMNAWAVE_USER_UUID
+```
+
+The command refuses to overwrite an existing link. Keep the SQLite database and its journal on persistent storage; back it up consistently. If a user has already opened `/vpn`, review the generated account and link manually rather than overwriting the binding blindly.
+
+## Deployment
+
+The Valhallishe infrastructure repository provides the Nix/systemd and rootless Podman configuration. It reads the panel token from `/home/krozzzis/.config/valhallishe-vpn/remnawave-token` on nixarchserver; never commit this file. Set `DATABASE_PATH` to the persistent SQLite path. `npm ci --legacy-peer-deps` installs the locked dependencies; `npm run db:migrate` migrates the auth database. The container starts with the migration.
+
+The Authentik application is `vpn-portal` and its access group is `vpn-portal-access`; the `default-citizen` role also grants access. The public OIDC callback is `/api/auth/callback/oauth`.
+
+---
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fkirill-dev-pro%2Foauth-vpn-portal)
 
 # OAuth VPN Portal

@@ -17,9 +17,9 @@ export function OauthSignInButton() {
   const signIn = useCallback(() => {
     const toastId = toast.loading('Signing in...')
     setIsLoading(true)
-    authClient.signIn.oauth2({
-      callbackURL: callbackUrl ?? '/vpn',
-      providerId: 'oauth',
+    authClient.signIn.social({
+      callbackURL: callbackUrl?.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : '/',
+      provider: 'oauth',
       fetchOptions: {
         onSuccess: () => {
           toast.loading('Redirecting...', { id: toastId })

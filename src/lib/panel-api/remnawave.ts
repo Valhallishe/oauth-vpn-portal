@@ -1,187 +1,65 @@
 import {
   CreateUserCommand,
-  DeleteUserCommand,
-  GetAllInboundsCommand,
   GetInternalSquadsCommand,
   GetSubscriptionInfoByShortUuidCommand,
+  GetUserByIdCommand,
   GetUserByUsernameCommand,
-  UpdateUserCommand,
 } from '@remnawave/backend-contract'
-import axios, { AxiosError, type AxiosInstance, type AxiosResponse } from 'axios'
+import axios, { type AxiosInstance } from 'axios'
+import { randomBytes } from 'node:crypto'
 import type { User } from 'better-auth'
-import { env } from '../env'
-import { gbToBytes } from '../utils'
-import { EXPIRE_NEVER, PANNEL_USER_ID_PREFIX } from './defaults'
-
-const formatUsername = (username: string) => {
-  return (PANNEL_USER_ID_PREFIX + username).substring(0, 32) // 32 is the max length of the username for Remnawave
-}
+import { database } from '../database'
+import { EXPIRE_NEVER } from './defaults'
 
 export type RemnawavePanelUser = GetSubscriptionInfoByShortUuidCommand.Response['response']
+type Binding = { remnawave_uuid: string | null; pending_username: string | null }
 
 export class RemnawaveAPI {
   private client: AxiosInstance
-
   constructor(baseUrl: string, apiKey: string) {
-    this.client = axios.create({
-      baseURL: baseUrl,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    })
+    this.client = axios.create({ baseURL: baseUrl, timeout: 15000, headers: { Authorization: `Bearer ${apiKey}`, 'X-Forwarded-For': '127.0.0.1', 'X-Forwarded-Proto': 'https', 'User-Agent': 'Valhallishe-VPN-Portal' } })
   }
 
-  async createNewPanelUser(webSiteUser: User) {
-    // const inbounds = await this.loadInstanceInbounds()
-    // const activeInbounds = inbounds.map((inbound) => inbound.uuid).filter(Boolean)
-    // const activeInternalSquads = inbounds.map((inbound) => inbound.uuid).filter(Boolean)
-    const {internalSquads} = await loadInternalSquads(this.client)
-
-    const username = formatUsername(webSiteUser.id)
-
-    const data: CreateUserCommand.Request = {
-      username,
-      trafficLimitStrategy: 'MONTH',
-      status: 'ACTIVE',
-      expireAt: EXPIRE_NEVER,
-      description: `User by oauth-vpn-portal, oauth details: ${JSON.stringify(webSiteUser)}`,
-      trafficLimitBytes: env.PANEL_USER_TRAFFIC_LIMIT_GB
-        ? gbToBytes(env.PANEL_USER_TRAFFIC_LIMIT_GB)
-        : undefined,
-
-      // this should be array of uuid's
-      activeInternalSquads: internalSquads.map((squad) => squad.uuid),
-      email: webSiteUser.email,
-    }
-    try {
-      const response = await this.client<
-        CreateUserCommand.Response,
-        AxiosResponse<CreateUserCommand.Response>,
-        CreateUserCommand.Request
-      >({
-        url: CreateUserCommand.url,
-        method: CreateUserCommand.endpointDetails.REQUEST_METHOD,
-        data,
-      })
-
-      return response.data.response
-    } catch (error) {
-      const axiosError = error as AxiosError<{ message: string; errors?: { message: string }[] }>
-      if (!axiosError.response) {
-        throw error
-      }
-      // console.log('Axios error', axiosError.response.data)
-      const { message, errors } = axiosError.response.data
-      const errorMessage = `Failed to create user: ${message}. Errors: ${errors?.map((e) => e.message).join(', ')}`
-      throw new Error(errorMessage, { cause: axiosError.response.data })
-    }
-  }
-
-  async getPanelUser(webSiteUser: User) {
-    try {
-      const username = formatUsername(webSiteUser.id)
-      const response = await this.client<
-        GetUserByUsernameCommand.Response,
-        AxiosResponse<GetUserByUsernameCommand.Response>,
-        GetUserByUsernameCommand.Request
-      >({
-        url: GetUserByUsernameCommand.url(username),
-        method: GetUserByUsernameCommand.endpointDetails.REQUEST_METHOD,
-      })
-      return response.data.response
-    } catch (error) {
-      console.log('Error getting user', error)
-      return null
-    }
-  }
-
-  async getOrCreatePanelUser(webSiteUser: User): Promise<RemnawavePanelUser> {
-    let panelUser = await this.getPanelUser(webSiteUser)
-
-    if (!panelUser) {
-      panelUser = await this.createNewPanelUser(webSiteUser)
-    }
-
-    const subscription = await this.client<
-      GetSubscriptionInfoByShortUuidCommand.Response,
-      AxiosResponse<GetSubscriptionInfoByShortUuidCommand.Response>,
-      GetSubscriptionInfoByShortUuidCommand.Request
-    >({
-      url: GetSubscriptionInfoByShortUuidCommand.url(panelUser.shortUuid),
-      method: GetSubscriptionInfoByShortUuidCommand.endpointDetails.REQUEST_METHOD,
-    })
-
-    return subscription.data.response
-  }
-
-  /**
-   * This updates the user's traffic limit
-   * @param uuid - The user's uuid
-   */
-  async updatePanelUser(webSiteUser: User) {
-    const user = await this.getPanelUser(webSiteUser)
-    if (!user) {
-      throw new Error('User not found')
-    }
-
-    await this.client<
-      UpdateUserCommand.Response,
-      AxiosResponse<UpdateUserCommand.Response>,
-      UpdateUserCommand.Request
-    >({
-      url: UpdateUserCommand.url,
-      method: UpdateUserCommand.endpointDetails.REQUEST_METHOD,
-      data: {
-        uuid: user.uuid,
-        trafficLimitBytes: env.PANEL_USER_TRAFFIC_LIMIT_GB
-          ? gbToBytes(env.PANEL_USER_TRAFFIC_LIMIT_GB)
-          : undefined,
-      },
-    })
-  }
-
-  async deletePanelUser(webSiteUser: User): Promise<void> {
-    await this.client<
-      DeleteUserCommand.Response,
-      AxiosResponse<DeleteUserCommand.Response>,
-      DeleteUserCommand.Request
-    >({
-      url: DeleteUserCommand.url(PANNEL_USER_ID_PREFIX + webSiteUser.id),
-      method: 'delete',
-    })
-  }
-
-  async loadInstanceInbounds() {
-    try {
-      const { data } = await this.client<
-        GetAllInboundsCommand.Response,
-        AxiosResponse<GetAllInboundsCommand.Response>
-      >({
-        url: GetAllInboundsCommand.url,
-        method: GetAllInboundsCommand.endpointDetails.REQUEST_METHOD,
-      })
-
-      return data.response
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        if (error.response?.status === 404) {
-          throw new Error('404 Axios Error, check your API key and URL')
+  async getOrCreatePanelUser(user: User): Promise<RemnawavePanelUser> {
+    // Reserve a cryptographically random name before creating the panel user. A retry
+    // recovers a successful but interrupted request without matching existing accounts.
+    const name = `vp_${randomBytes(14).toString('hex')}`
+    database.prepare('INSERT OR IGNORE INTO vpn_bindings (user_id, pending_username) VALUES (?, ?)').run(user.id, name)
+    const binding = database.prepare('SELECT remnawave_uuid, pending_username FROM vpn_bindings WHERE user_id = ?').get(user.id) as Binding
+    let panelUser: { uuid: string; shortUuid: string }
+    if (binding.remnawave_uuid) {
+      const result = await this.client.get(GetUserByIdCommand.url(binding.remnawave_uuid))
+      panelUser = result.data.response
+    } else {
+      if (!binding.pending_username) throw new Error('VPN binding is incomplete; contact administrator')
+      const pending = binding.pending_username
+      try {
+        const result = await this.client.get(GetUserByUsernameCommand.url(pending))
+        panelUser = result.data.response
+      } catch (error) {
+        if (!axios.isAxiosError(error) || error.response?.status !== 404) throw error
+        const squads = await this.client.get(GetInternalSquadsCommand.url)
+        const matching = squads.data.response.internalSquads.filter((s: { name: string }) => s.name === 'Default-Squad')
+        if (matching.length !== 1) throw new Error('Default-Squad must exist exactly once')
+        try {
+          const created = await this.client.post(CreateUserCommand.url, {
+            username: pending, status: 'ACTIVE', expireAt: EXPIRE_NEVER.toISOString(),
+            trafficLimitStrategy: 'NO_RESET', trafficLimitBytes: 0,
+            description: 'Created by Valhallishe VPN portal',
+            activeInternalSquads: [matching[0].uuid],
+          })
+          panelUser = created.data.response
+        } catch (error) {
+          // Another request may have created this exact reserved username.
+          if (!axios.isAxiosError(error) || ![400, 409].includes(error.response?.status ?? 0)) throw error
+          const result = await this.client.get(GetUserByUsernameCommand.url(pending))
+          panelUser = result.data.response
         }
       }
-      throw error
+      const result = database.prepare('UPDATE vpn_bindings SET remnawave_uuid = ?, pending_username = NULL WHERE user_id = ? AND pending_username = ?').run(panelUser.uuid, user.id, pending)
+      if (!result.changes) throw new Error('VPN binding changed; retry')
     }
+    const subscription = await this.client.get(GetSubscriptionInfoByShortUuidCommand.url(panelUser.shortUuid))
+    return subscription.data.response
   }
-}
-
-
-const loadInternalSquads = async (client: AxiosInstance): Promise<GetInternalSquadsCommand.Response['response']> => {
-  const { data } = await client<
-    GetInternalSquadsCommand.Response,
-    AxiosResponse<GetInternalSquadsCommand.Response>
-  >({
-    url: GetInternalSquadsCommand.url,
-    method: GetInternalSquadsCommand.endpointDetails.REQUEST_METHOD,
-  })
-
-  return data.response
 }
