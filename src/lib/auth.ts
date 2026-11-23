@@ -25,7 +25,9 @@ export const auth = betterAuth({
           mapProfileToUser: (profile) => {
             return {
               email: profile.email ?? undefined,
-              name: profile.name,
+              name: typeof profile.preferred_username === 'string'
+                ? profile.preferred_username
+                : profile.name,
               image: typeof profile.picture === 'string' ? profile.picture : undefined,
             }
           },

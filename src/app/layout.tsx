@@ -1,4 +1,5 @@
 import { Toaster } from '@/components/ui/sonner'
+import { SiteHeader } from '@/components/site-header'
 import { env } from '@/lib/env'
 import { fontVariables } from '@/lib/font'
 import { cn } from '@/lib/utils'
@@ -36,6 +37,7 @@ export default async function RootLayout({
           disableTransitionOnChange
           enableColorScheme
         >
+          <SiteHeader />
           <Toaster />
           {children}
         </ThemeProvider>

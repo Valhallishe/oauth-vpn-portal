@@ -17,39 +17,37 @@ import I18nProvider from './i18n/i18nProvider'
 export const SubViewComponent = ({
   subscription,
   user,
+}: { subscription: RemnawavePanelUser; user: User }) => (
+  <I18nProvider>
+    <ModalsProvider>
+      <SubscriptionContent subscription={subscription} user={user} />
+    </ModalsProvider>
+  </I18nProvider>
+)
+
+const SubscriptionContent = ({
+  subscription,
+  user,
 }: { subscription: RemnawavePanelUser; user: User }) => {
   const { t } = useTranslation()
 
   return (
-    <I18nProvider>
-      <ModalsProvider>
-        <div className="max-w-[530px] self-center w-full">
-          <Container my="xl" size="xl">
-            <Stack gap="xl">
-              <Group justify="space-between">
-                <Group gap="xs">
-                  <Title order={4}>{t('main.page.component.podpiska')}</Title>
-                </Group>
-                <Group gap="xs">
-                  <SubscriptionLinkWidget subscription={subscription} />
-                </Group>
-              </Group>
-
-              <Stack gap="xl">
-                <SubscriptionInfoWidget subscription={subscription} user={user} />
-                <InstallationGuideWidget
-                  appsConfig={appsConfig as IPlatformConfig}
-                  subscription={subscription}
-                />
-              </Stack>
-
-              {/* <Center>
-            <LanguagePicker />
-          </Center> */}
-            </Stack>
-          </Container>
-        </div>
-      </ModalsProvider>
-    </I18nProvider>
+    <div className="max-w-[530px] self-center w-full">
+      <Container my="xl" size="xl">
+        <Stack gap="xl">
+          <Group justify="space-between">
+            <Title order={4}>{t('main.page.component.podpiska')}</Title>
+            <SubscriptionLinkWidget subscription={subscription} />
+          </Group>
+          <Stack gap="xl">
+            <SubscriptionInfoWidget subscription={subscription} user={user} />
+            <InstallationGuideWidget
+              appsConfig={appsConfig as IPlatformConfig}
+              subscription={subscription}
+            />
+          </Stack>
+        </Stack>
+      </Container>
+    </div>
   )
 }

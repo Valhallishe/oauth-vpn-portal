@@ -1,4 +1,3 @@
-import SmallHeader from '@/app/vpn/_components/header'
 import { env } from '@/lib/env'
 import type { Metadata } from 'next'
 
@@ -13,9 +12,6 @@ export default async function VpnPageLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
-      <SmallHeader />
-      {children}
-    </>
+    <>{children}</>
   )
 }
