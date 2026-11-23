@@ -12,7 +12,7 @@ import { database } from '../database'
 import { EXPIRE_NEVER } from './defaults'
 
 export type RemnawavePanelUser = GetSubscriptionInfoByShortUuidCommand.Response['response']
-type Binding = { remnawave_uuid: string | null; pending_username: string | null }
+type Binding = { remnawave_id: number | null; pending_username: string | null }
 
 export class RemnawaveAPI {
   private client: AxiosInstance
@@ -25,10 +25,10 @@ export class RemnawaveAPI {
     // recovers a successful but interrupted request without matching existing accounts.
     const name = `vp_${randomBytes(14).toString('hex')}`
     database.prepare('INSERT OR IGNORE INTO vpn_bindings (user_id, pending_username) VALUES (?, ?)').run(user.id, name)
-    const binding = database.prepare('SELECT remnawave_uuid, pending_username FROM vpn_bindings WHERE user_id = ?').get(user.id) as Binding
-    let panelUser: { uuid: string; shortUuid: string }
-    if (binding.remnawave_uuid) {
-      const result = await this.client.get(GetUserByIdCommand.url(binding.remnawave_uuid))
+    const binding = database.prepare('SELECT remnawave_id, pending_username FROM vpn_bindings WHERE user_id = ?').get(user.id) as Binding
+    let panelUser: { id: number; shortUuid: string }
+    if (binding.remnawave_id) {
+      const result = await this.client.get(GetUserByIdCommand.url(String(binding.remnawave_id)))
       panelUser = result.data.response
     } else {
       if (!binding.pending_username) throw new Error('VPN binding is incomplete; contact administrator')
@@ -56,7 +56,7 @@ export class RemnawaveAPI {
           panelUser = result.data.response
         }
       }
-      const result = database.prepare('UPDATE vpn_bindings SET remnawave_uuid = ?, pending_username = NULL WHERE user_id = ? AND pending_username = ?').run(panelUser.uuid, user.id, pending)
+      const result = database.prepare('UPDATE vpn_bindings SET remnawave_id = ?, pending_username = NULL WHERE user_id = ? AND pending_username = ?').run(panelUser.id, user.id, pending)
       if (!result.changes) throw new Error('VPN binding changed; retry')
     }
     const subscription = await this.client.get(GetSubscriptionInfoByShortUuidCommand.url(panelUser.shortUuid))

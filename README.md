@@ -9,7 +9,7 @@ New users who open `/vpn` receive an unlimited subscription in `Default-Squad` (
 An administrator must link an existing subscription before that user first opens `/vpn`. The user should first sign in at `/` so the portal has a local account. In the running container execute:
 
 ```sh
-node scripts/link-user.cjs USER_EMAIL REMNAWAVE_USER_UUID
+node scripts/link-user.cjs USER_EMAIL REMNAWAVE_USER_ID
 ```
 
 The command refuses to overwrite an existing link. Keep the SQLite database and its journal on persistent storage; back it up consistently. If a user has already opened `/vpn`, review the generated account and link manually rather than overwriting the binding blindly.

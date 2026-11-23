@@ -5,6 +5,6 @@ export const database = new Database(process.env.DATABASE_PATH || 'auth-db.sqlit
 database.pragma('journal_mode = WAL')
 database.exec(`CREATE TABLE IF NOT EXISTS vpn_bindings (
   user_id TEXT PRIMARY KEY,
-  remnawave_uuid TEXT UNIQUE,
+  remnawave_id INTEGER UNIQUE,
   pending_username TEXT UNIQUE
 )`)
